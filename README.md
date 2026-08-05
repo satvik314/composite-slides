@@ -9,7 +9,7 @@ while a shared skeleton keeps it feeling like *one* deck.
 
 Every deck is a **single self-contained HTML file**. No frameworks. No build step. Open it and present.
 
-[The decks](#the-decks) · [Why](#why-composite) · [Run it](#run-it) · [The recipe](#the-recipe) · [Make your own](#make-your-own)
+[The decks](#the-decks) · [Why](#why-composite) · [Run it](#run-it) · [The recipe](#the-recipe) · [Install the skill](#install-the-skill)
 
 </div>
 
@@ -96,9 +96,30 @@ And one rule of restraint: **a constant measuring stick** (acres vs NYC, quarter
 
 Ten more fully-specified deck concepts (with signature exits and breach moments) live in **[EXAMPLES.md](EXAMPLES.md)**, along with a litmus test for which topics deserve the treatment.
 
-## Make your own
+## Install the skill
 
-Composite decks are AI-native by design — hand one of the decks in `decks/` to your favorite coding assistant along with the recipe above and a prompt like:
+The whole method ships as an **agent skill** — [`skills/composite-slides/SKILL.md`](skills/composite-slides/SKILL.md) — so your AI assistant can build composite decks for you on any topic.
+
+**With the skills CLI:**
+
+```bash
+npx skills add satvik314/composite-slides
+```
+
+**Manual install (works with any assistant that supports skills):**
+
+- **Claude Code**: copy the skill folder into your skills directory
+  ```bash
+  mkdir -p ~/.claude/skills/composite-slides
+  curl -o ~/.claude/skills/composite-slides/SKILL.md \
+    https://raw.githubusercontent.com/satvik314/composite-slides/main/skills/composite-slides/SKILL.md
+  ```
+- **claude.ai / Claude desktop**: download [`SKILL.md`](skills/composite-slides/SKILL.md) and upload it under **Settings → Capabilities → Skills**.
+- **Other assistants**: paste the contents of `SKILL.md` into your system prompt or rules file — it's just markdown.
+
+Then ask: *"Build a composite slide deck about `<your topic>`."*
+
+**No skills support?** Paste this prompt along with one of the decks in `decks/` as a reference:
 
 > Build a composite slide deck about `<your topic>` as a single self-contained HTML file.
 > Keep a shared skeleton (scroll/arrow/swipe navigation, a themed progress rail, a consistent
@@ -107,7 +128,9 @@ Composite decks are AI-native by design — hand one of the decks in `decks/` to
 > moment where a slide's world leaks into the next. End with a finale slide in a neutral
 > style that lines all the themes up side by side.
 
-PRs with new decks are very welcome — add a single HTML file to `decks/`, register it in `src/main.js`, and open a PR.
+## Contributing
+
+PRs with new decks are very welcome — add a single HTML file to `decks/`, register it in `src/main.js`, and open a PR. Improvements to the skill itself (`skills/composite-slides/SKILL.md`) are equally welcome.
 
 ## License
 
