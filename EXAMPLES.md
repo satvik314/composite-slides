@@ -2,7 +2,7 @@
 
 A composite deck is a presentation where **every slide speaks its own visual language** — palette, typography, ambient motion, cursor, sound, and even the exit transition are all derived from that slide's content, while a shared skeleton (navigation, progress rail, layout grammar) keeps it feeling like one deck.
 
-The recipe, distilled from [`city_slides_composite.html`](city_slides_composite.html):
+The recipe, distilled from [`decks/acre-atlas.html`](decks/acre-atlas.html):
 
 1. **Shared skeleton** — one nav system, one layout grammar (eyebrow → title → big stat → chips), one progress rail.
 2. **Per-slide language** — background, palette, display type, and an ambient system (rain, neon flicker, fog…) that *is* the content.
@@ -14,7 +14,26 @@ Below are deck concepts designed to exploit this format. Each lists the per-slid
 
 ---
 
-## 1. The Interface Ages — *built: [`interface_ages_composite.html`](interface_ages_composite.html)*
+## 0. The Board Deck — *built: [`decks/board-meeting.html`](decks/board-meeting.html)*
+
+**A quarterly board review where each department presents in its native language.** The most practical use case in this list: the theme isn't a metaphor, it's a label — you always know whose numbers you're looking at.
+
+| Slide | Language | Note |
+|---|---|---|
+| Cover / Quarter / Close | Executive ivory, serif, restrained | Neutral bookends make the theme shifts read as chapters |
+| Finance | Spreadsheet: ledger grid, column headers, formula bar, cell-referenced KPI "cells" | Exit: the sheet clears column by column |
+| Engineering | IDE: line numbers, tab bar, syntax-highlighted stats, status bar | Exit: terminal reset |
+| Design | Multiplayer canvas: dot grid, drifting named cursors, sticky-note KPIs, selection box on the title | Exit: select-all → delete |
+| Marketing | Campaign gradient, story progress bars, glassy stat pills | Exit: story swipe-up |
+| Sales | Leaderboard: navy + gold, pipeline bars by segment | Exit: bars slam shut |
+| People | Warm cream + serif, soft shapes | Humanity as a design language |
+| Risks & Asks | A stark, undecorated memo | Removing all theming IS the theme — it signals seriousness |
+
+Restraint notes: no sound, no custom cursors, no breach moments — a board deck earns trust by showing the format can behave.
+
+---
+
+## 1. The Interface Ages — *built: [`decks/interface-ages.html`](decks/interface-ages.html)*
 
 **Fifty years of UI design, where each slide IS the design language of its era.** The strongest possible fit for composite slides: the theme isn't a metaphor for the content — it literally *is* the content.
 
