@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE ACRE ATLAS — How Big Are the World's Cities?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0d0d0f;
+  --paper:#f5f2ec;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:var(--ink)}
+body{font-family:'Space Grotesk',sans-serif;color:#fff;cursor:none}
+
+/* ---------- DECK ---------- */
+#deck{height:100%;width:100%;position:relative}
+.slide{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;
+  transform:scale(1.06);
+  transition:opacity .8s cubic-bezier(.22,1,.36,1), transform .8s cubic-bezier(.22,1,.36,1);
+  overflow:hidden;
+}
+.slide.active{opacity:1;pointer-events:auto;transform:scale(1)}
+/* SIGNATURE EXITS: leaving slides stay visible for their themed outro */
+.slide.leaving{opacity:1;pointer-events:none;z-index:8}
+.slide.leaving .slide-inner{opacity:0;transition:opacity .4s .15s}
+.slide-inner{position:relative;z-index:5;width:min(1100px,92vw);padding:0 2vw}
+
+/* ---------- SHARED TYPE ---------- */
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace;font-size:clamp(.65rem,1.2vw,.8rem);
+  letter-spacing:.35em;text-transform:uppercase;opacity:.7;margin-bottom:1.2rem;
+  display:flex;align-items:center;gap:.8rem;
+}
+.eyebrow::before{content:'';width:2.4rem;height:1px;background:currentColor;opacity:.6}
+.city-name{
+  font-family:'Anton',sans-serif;
+  font-size:clamp(3.4rem,11vw,8.5rem);
+  line-height:.92;text-transform:uppercase;letter-spacing:.01em;
+  margin-bottom:1.4rem;
+}
+.city-name .word{display:inline-block;overflow:hidden;vertical-align:bottom}
+.city-name .word span{display:inline-block;transform:translateY(110%);transition:transform .7s cubic-bezier(.22,1,.36,1)}
+.slide.active .city-name .word span{transform:translateY(0)}
+.acres{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:clamp(1.6rem,4.6vw,3.4rem);font-weight:600;
+  display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;
+  margin-bottom:.4rem;
+}
+.acres small{font-size:.38em;font-weight:400;letter-spacing:.2em;text-transform:uppercase;opacity:.65}
+.km-note{font-family:'IBM Plex Mono',monospace;font-size:clamp(.7rem,1.4vw,.85rem);opacity:.55;margin-bottom:2rem}
+
+/* scale bar: city vs NYC */
+.scalebar{margin:1.6rem 0 2rem;max-width:560px}
+.scalebar .sb-label{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.25em;text-transform:uppercase;opacity:.65;margin-bottom:.5rem;display:flex;justify-content:space-between}
+.sb-track{height:14px;border:1px solid currentColor;position:relative;overflow:hidden}
+.sb-fill{position:absolute;inset:0;transform-origin:left;transform:scaleX(0);transition:transform 1.4s cubic-bezier(.22,1,.36,1) .5s}
+.slide.active .sb-fill{transform:scaleX(1)}
+.sb-nyc{position:absolute;top:-5px;bottom:-5px;width:2px;background:currentColor}
+.sb-nyc::after{content:'NYC';position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:.15em}
+
+/* stat chips */
+.chips{display:flex;gap:.9rem;flex-wrap:wrap}
+.chip{
+  border:1px solid rgba(255,255,255,.28);
+  padding:.85rem 1.15rem;min-width:140px;
+  backdrop-filter:blur(4px);cursor:default;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1), background .25s, border-color .25s;
+  will-change:transform;
+}
+.chip:hover{transform:translateY(-5px) rotate(-1deg);background:rgba(255,255,255,.07)}
+.chip .k{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.25em;text-transform:uppercase;opacity:.6;margin-bottom:.35rem}
+.chip .v{font-size:1.05rem;font-weight:700}
+
+/* ---------- PROGRESS RAIL (theme-aware) ---------- */
+#rail{
+  position:fixed;right:1.4rem;top:50%;transform:translateY(-50%);
+  z-index:50;display:flex;flex-direction:column;gap:.55rem;
+}
+.dot{
+  width:34px;height:34px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;
+  font-family:'IBM Plex Mono',monospace;font-size:.58rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .3s;opacity:.55;
+}
+.dot:hover{opacity:1;transform:scale(1.15)}
+.dot.passed{opacity:.85;border-color:var(--c);color:var(--c)}
+.dot.on{opacity:1;background:var(--c);color:#000;border-color:var(--c);transform:scale(1.12);box-shadow:0 0 16px var(--c)}
+
+#hint{
+  position:fixed;bottom:1.3rem;left:50%;transform:translateX(-50%);
+  font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.3em;
+  text-transform:uppercase;opacity:.5;z-index:50;pointer-events:none;
+  animation:pulse 2.6s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:.15}}
+
+#counter-hud{
+  position:fixed;top:1.3rem;left:1.6rem;z-index:50;
+  font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.3em;opacity:.6;
+}
+#sndbtn{position:fixed;top:1.1rem;right:1.4rem;z-index:60;background:none;border:1px solid rgba(255,255,255,.35);color:#fff;
+  font-family:'IBM Plex Mono',monospace;font-size:.58rem;letter-spacing:.25em;padding:.55rem .9rem;transition:all .3s;opacity:.7;cursor:pointer}
+#sndbtn:hover{opacity:1;transform:scale(1.06)}
+#sndbtn.on{background:#fff;color:#000}
+
+/* ---------- PER-SLIDE CURSOR ---------- */
+#cursor{position:fixed;left:0;top:0;z-index:100;pointer-events:none;transform:translate(-50%,-50%);
+  transition:width .3s,height .3s,background .3s,border .3s,box-shadow .3s,border-radius .3s}
+body.cur-cross #cursor{width:26px;height:26px;border:1px solid #f5f2ec;border-radius:0}
+body.cur-cross #cursor::before,body.cur-cross #cursor::after{content:'';position:absolute;background:#f5f2ec}
+body.cur-cross #cursor::before{left:50%;top:-7px;bottom:-7px;width:1px}
+body.cur-cross #cursor::after{top:50%;left:-7px;right:-7px;height:1px}
+body.cur-taxi #cursor{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle,rgba(255,214,10,.85),rgba(255,214,10,0) 70%);box-shadow:0 0 30px rgba(255,214,10,.5)}
+body.cur-neon #cursor{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle,rgba(255,79,216,.9),rgba(57,213,255,0) 70%);box-shadow:0 0 26px rgba(255,79,216,.7)}
+body.cur-fog #cursor{width:64px;height:64px;border-radius:50%;background:radial-gradient(circle,rgba(232,228,218,.3),transparent 70%)}
+body.cur-petal #cursor{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffd166,#fb5607);box-shadow:0 0 14px rgba(251,86,7,.7)}
+body.cur-drop #cursor{width:14px;height:22px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:linear-gradient(#bfe6f5,#3a9bc4);box-shadow:0 0 12px rgba(142,202,230,.6)}
+body.cur-moon #cursor{width:26px;height:26px;border-radius:50%;box-shadow:8px 4px 0 0 #e8d8b0}
+body.cur-concrete #cursor{width:24px;height:24px;background:#f2e94e;border-radius:2px;transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 12px rgba(242,233,78,.5)}
+body.cur-lantern #cursor{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(255,209,102,.6),rgba(224,122,31,0) 70%);box-shadow:0 0 34px rgba(255,209,102,.5)}
+body.cur-brush #cursor{width:30px;height:30px;border-radius:50%;border:2px dashed #d94f30}
+@media (pointer:coarse){body{cursor:auto}#cursor{display:none}}
+
+/* ================= SLIDE 0 · INTRO ================= */
+#s-intro{background:#0d0d0f;color:var(--paper)}
+#s-intro .slide-inner{text-align:center}
+#s-intro .city-name{font-size:clamp(2.8rem,9vw,7rem)}
+#s-intro .sub{font-size:clamp(.95rem,2vw,1.2rem);opacity:.7;max-width:560px;margin:0 auto 2.4rem;font-weight:300;line-height:1.6}
+.unit-demo{
+  display:inline-flex;align-items:center;gap:1rem;
+  border:1px solid rgba(245,242,236,.25);padding:1rem 1.6rem;
+  font-family:'IBM Plex Mono',monospace;font-size:.8rem;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1);cursor:crosshair;
+}
+.unit-demo:hover{transform:scale(1.05) rotate(.6deg)}
+.unit-demo .sq{width:26px;height:26px;background:var(--paper);animation:sqspin 6s linear infinite}
+@keyframes sqspin{to{transform:rotate(360deg)}}
+#stars{position:absolute;inset:0;z-index:1}
+.star{position:absolute;width:2px;height:2px;background:rgba(245,242,236,.5);border-radius:50%;animation:twinkle 3s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.15}50%{opacity:.8}}
+
+/* ================= NYC · taxi grid ================= */
+#s-nyc{background:#111;color:#ffd60a}
+#s-nyc .sb-fill{background:#ffd60a}
+#s-nyc .chip{border-color:rgba(255,214,10,.35)}
+.nycgrid{position:absolute;inset:0;z-index:1;display:grid;grid-template-columns:repeat(18,1fr);grid-template-rows:repeat(10,1fr);gap:2px;opacity:.16}
+.blk{background:#ffd60a;opacity:0;transition:opacity 1.2s}
+.slide.active .blk{opacity:.28}
+.blk:hover{opacity:1 !important;transition:opacity .08s}
+#s-nyc .glow{position:absolute;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(255,214,10,.16),transparent 65%);pointer-events:none;z-index:2;transform:translate(-50%,-50%)}
+/* exit: grid blacks out block by block */
+#s-nyc.leaving .blk{opacity:0 !important;transition:opacity .3s}
+#s-nyc.leaving .glow{opacity:0;transition:opacity .3s}
+
+/* ================= TOKYO · neon night ================= */
+#s-tokyo{background:#07071a;color:#ff4fd8}
+#s-tokyo .sb-fill{background:linear-gradient(90deg,#ff4fd8,#39d5ff)}
+#s-tokyo .city-name{text-shadow:0 0 22px rgba(255,79,216,.65),0 0 60px rgba(57,213,255,.3)}
+#s-tokyo .chip{border-color:rgba(57,213,255,.4);color:#c9f6ff}
+.neon-v{
+  position:absolute;writing-mode:vertical-rl;font-family:'Anton';letter-spacing:.3em;
+  font-size:clamp(1.4rem,3.5vw,2.6rem);z-index:1;opacity:.85;user-select:none;
+}
+.neon-a{left:5%;top:8%;color:#39d5ff;text-shadow:0 0 14px #39d5ff;animation:flick 4.2s steps(1) infinite}
+.neon-b{right:7%;top:14%;color:#ff4fd8;text-shadow:0 0 14px #ff4fd8;animation:flick 3.1s steps(1) infinite .7s}
+.neon-c{left:14%;bottom:6%;color:#ffe14f;text-shadow:0 0 14px #ffe14f;animation:flick 5s steps(1) infinite 1.4s}
+@keyframes flick{0%,92%,96%,100%{opacity:.85}93%,95%{opacity:.15}}
+/* exit: power cut — neon dies with a final stutter */
+#s-tokyo.leaving .neon-v{animation:powercut .6s steps(1) forwards}
+#s-tokyo.leaving .city-name{text-shadow:none;transition:text-shadow .2s}
+@keyframes powercut{0%{opacity:.85}20%{opacity:.1}35%{opacity:.7}55%{opacity:.05}70%{opacity:.4}100%{opacity:0}}
+
+/* ================= LONDON · fog & roundel ================= */
+#s-london{background:#1b2330;color:#e8e4da}
+#s-london .sb-fill{background:#e0322c}
+#s-london .chip:hover{transform:translateY(-5px) rotate(1deg)}
+.fog{position:absolute;width:160%;height:45%;left:-30%;z-index:1;background:radial-gradient(ellipse at center,rgba(232,228,218,.13),transparent 70%);animation:drift 26s linear infinite;transition:opacity .5s}
+.fog.f2{top:44%;animation-duration:34s;animation-direction:reverse;opacity:.7}
+.fog.f3{top:70%;animation-duration:20s;opacity:.5}
+@keyframes drift{from{transform:translateX(-12%)}to{transform:translateX(12%)}}
+.roundel{position:absolute;right:8%;top:12%;width:120px;height:120px;z-index:1;opacity:.9;transition:transform .6s cubic-bezier(.34,1.56,.64,1),opacity .5s;cursor:pointer}
+.roundel:hover{transform:rotate(180deg) scale(1.1)}
+.roundel .ring{position:absolute;inset:0;border:14px solid #e0322c;border-radius:50%}
+.roundel .bar{position:absolute;left:-14px;right:-14px;top:calc(50% - 13px);height:26px;background:#1c4595}
+/* exit: fog rolls in and swallows everything */
+#s-london.leaving .fog{opacity:1}
+#s-london.leaving .roundel{opacity:0}
+
+/* ================= DELHI · marigold ================= */
+#s-delhi{background:#40120c;color:#ffb703}
+#s-delhi .sb-fill{background:linear-gradient(90deg,#ffb703,#fb5607)}
+#s-delhi .chip{border-color:rgba(255,183,3,.4)}
+.marigold{position:absolute;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffd166,#fb5607);z-index:1;animation:floaty linear infinite;opacity:.75;transition:opacity .4s, transform .4s}
+@keyframes floaty{from{transform:translateY(105vh) rotate(0)}to{transform:translateY(-12vh) rotate(340deg)}}
+/* exit: petals burst and vanish */
+#s-delhi.leaving .marigold{opacity:0;transform:scale(2.4)}
+
+/* ================= MUMBAI · monsoon ================= */
+#s-mumbai{background:#0b1f2a;color:#8ecae6}
+#s-mumbai .sb-fill{background:#8ecae6}
+#s-mumbai .chip{border-color:rgba(142,202,230,.35)}
+.rain{position:absolute;top:-12vh;width:1px;height:11vh;background:linear-gradient(rgba(142,202,230,0),rgba(142,202,230,.55));z-index:1;animation:fall linear infinite}
+@keyframes fall{to{transform:translateY(120vh)}}
+#s-mumbai .sea{position:absolute;bottom:0;left:0;right:0;height:16%;z-index:1;background:linear-gradient(rgba(142,202,230,.06),rgba(142,202,230,.16));animation:tide 5s ease-in-out infinite alternate;transition:height .8s}
+@keyframes tide{from{height:14%}to{height:18%}}
+/* exit: the sea rises to flood the slide */
+#s-mumbai.leaving .sea{height:60%;animation:none}
+#s-mumbai.leaving .rain{opacity:0;transition:opacity .5s}
+/* BREACH: rain leaks onto the next slide */
+.floodrain{position:absolute;top:-12vh;width:1px;height:11vh;z-index:41;pointer-events:none;
+  background:linear-gradient(rgba(142,202,230,0),rgba(142,202,230,.5));animation:fall linear infinite}
+.flooded::after{content:'· monsoon overflow ·';position:absolute;bottom:1.2rem;right:1.6rem;z-index:41;
+  font-family:'IBM Plex Mono',monospace;font-size:.58rem;letter-spacing:.3em;color:#8ecae6;opacity:.8;text-transform:uppercase}
+
+/* ================= ISTANBUL · iznik tiles ================= */
+#s-istanbul{background:#08343f;color:#e8d8b0}
+#s-istanbul .sb-fill{background:#d94f30}
+#s-istanbul .chip{border-color:rgba(232,216,176,.35)}
+.tiles{position:absolute;inset:0;z-index:1;opacity:.12;transition:opacity .5s, transform .8s;
+  background-image:radial-gradient(circle at center,#e8d8b0 2px,transparent 2.5px),radial-gradient(circle at center,#d94f30 1.5px,transparent 2px);
+  background-size:56px 56px,56px 56px;background-position:0 0,28px 28px;
+  animation:tileshift 24s linear infinite}
+@keyframes tileshift{to{background-position:56px 56px,84px 84px}}
+.crescent{position:absolute;left:8%;top:10%;width:90px;height:90px;border-radius:50%;box-shadow:18px 8px 0 0 #e8d8b0;z-index:1;opacity:.85;transition:transform .5s,opacity .5s}
+.crescent:hover{transform:rotate(-14deg) scale(1.08)}
+/* exit: mosaic rotates away */
+#s-istanbul.leaving .tiles{opacity:0;transform:rotate(8deg) scale(1.15)}
+#s-istanbul.leaving .crescent{opacity:0}
+
+/* ================= SÃO PAULO · concrete rhythm ================= */
+#s-sp{background:#2d2a26;color:#f2e94e}
+#s-sp .sb-fill{background:#f2e94e}
+#s-sp .chip{border-color:rgba(242,233,78,.35)}
+.skyline{position:absolute;bottom:0;left:0;right:0;height:42%;z-index:1;display:flex;align-items:flex-end;gap:6px;padding:0 3vw;opacity:.35}
+.bld{flex:1;background:#f2e94e;transform:scaleY(0);transform-origin:bottom;transition:transform .9s cubic-bezier(.22,1,.36,1)}
+.slide.active .bld{transform:scaleY(1)}
+.bld:hover{background:#fff;transition:background .1s, transform .9s cubic-bezier(.22,1,.36,1)}
+/* exit: skyline demolished bottom-up */
+#s-sp.leaving .bld{transform:scaleY(0);transition-duration:.45s}
+
+/* ================= BEIJING · vermillion ================= */
+#s-beijing{background:#8f1d14;color:#ffe8b0}
+#s-beijing .sb-fill{background:#ffe8b0}
+#s-beijing .chip{border-color:rgba(255,232,176,.4)}
+.lattice{position:absolute;inset:0;z-index:1;opacity:.1;transition:opacity .5s;
+  background-image:linear-gradient(#ffe8b0 1px,transparent 1px),linear-gradient(90deg,#ffe8b0 1px,transparent 1px);
+  background-size:64px 64px}
+.sun{position:absolute;right:10%;top:10%;width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,#ffd166,#e07a1f);z-index:1;opacity:.9;animation:breathe 5s ease-in-out infinite;cursor:pointer;transition:transform .8s,opacity .8s}
+.sun:hover{animation-duration:1.4s}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
+#s-beijing .mega{font-family:'IBM Plex Mono',monospace;font-size:.75rem;letter-spacing:.15em;border:1px dashed rgba(255,232,176,.5);display:inline-block;padding:.5rem .9rem;margin-top:.4rem;opacity:.85}
+/* exit: the sun eclipses — swells and dies */
+#s-beijing.leaving .sun{animation:none;transform:scale(2.6);opacity:0}
+#s-beijing.leaving .lattice{opacity:0}
+
+/* ================= FINALE · comparison ================= */
+#s-final{background:#0d0d0f;color:var(--paper)}
+#s-final .city-name{font-size:clamp(2.2rem,7vw,4.6rem)}
+.bars{display:flex;flex-direction:column;gap:.7rem;margin-top:1.6rem}
+.brow{display:grid;grid-template-columns:110px 1fr 110px;align-items:center;gap:1rem;font-family:'IBM Plex Mono',monospace;font-size:clamp(.62rem,1.3vw,.78rem)}
+.brow .nm{letter-spacing:.15em;text-transform:uppercase;text-align:right;opacity:.85}
+.btrack{height:16px;position:relative;background:rgba(245,242,236,.07)}
+.bfill{position:absolute;inset:0;transform-origin:left;transform:scaleX(0);transition:transform 1.5s cubic-bezier(.22,1,.36,1)}
+.slide.active .bfill{transform:scaleX(1)}
+.brow:hover .bfill{filter:brightness(1.35)}
+.brow .num{opacity:.7}
+/* exit: bars snap shut */
+#s-final.leaving .bfill{transform:scaleX(0) !important;transition-duration:.4s;transition-delay:0s !important}
+
+/* ================= PRINT EDITION · risograph ================= */
+#s-print{background:#f2ede2;color:#20313f}
+#s-print .city-name{color:#20313f;font-size:clamp(2.2rem,7vw,4.6rem)}
+.papergrain{position:absolute;inset:0;z-index:1;opacity:.6;
+  background-image:radial-gradient(rgba(32,49,63,.06) 1px,transparent 1px);background-size:4px 4px}
+.misreg{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.misreg .ghost{position:absolute;font-family:'Anton';font-size:clamp(4rem,14vw,11rem);text-transform:uppercase;
+  line-height:.94;opacity:.18;left:var(--gx);top:var(--gy);color:var(--gc);mix-blend-mode:multiply}
+.riso-row{display:flex;gap:.9rem;flex-wrap:wrap;margin-top:1.8rem}
+.riso{flex:1;min-width:120px;padding:.9rem;border:2px solid #20313f;position:relative;background:rgba(255,255,255,.35);
+  transition:transform .25s}
+.riso:hover{transform:translateY(-5px) rotate(.8deg)}
+.riso .sw{position:absolute;top:-9px;right:-9px;width:22px;height:22px;border-radius:50%;background:var(--c);mix-blend-mode:multiply}
+.riso .k{font-family:'IBM Plex Mono',monospace;font-size:.55rem;letter-spacing:.22em;text-transform:uppercase;opacity:.65;margin-bottom:.3rem}
+.riso .v{font-weight:700;font-size:.92rem}
+.riso .a{font-family:'IBM Plex Mono',monospace;font-size:.62rem;opacity:.6;margin-top:.25rem}
+.stamp{
+  display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;
+  border:3px double #d94f30;color:#d94f30;padding:.65rem 1.2rem;transform:rotate(-4deg);margin-top:1.8rem;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.stamp:hover{transform:rotate(2deg) scale(1.08)}
+
+@media (max-width:700px){
+  #rail{right:.5rem;gap:.35rem}
+  .dot{width:26px;height:26px;font-size:.5rem}
+  .neon-v{display:none}
+  .roundel,.sun,.crescent{display:none}
+  .brow{grid-template-columns:78px 1fr 80px}
+  body{cursor:auto}#cursor{display:none}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important;transition-duration:.01s !important}
+}
+</style>
+</head>
+<body class="cur-cross">
+
+<div id="cursor"></div>
+<div id="counter-hud">THE ACRE ATLAS</div>
+<button id="sndbtn">SOUND: OFF</button>
+<div id="hint">scroll · arrows · swipe</div>
+<div id="rail"></div>
+
+<div id="deck">
+
+  <!-- INTRO -->
+  <section class="slide active" id="s-intro" data-initial="◎" data-color="#f5f2ec" data-cursor="cur-cross" data-sound="none">
+    <div id="stars"></div>
+    <div class="slide-inner">
+      <div class="eyebrow" style="justify-content:center">a field guide to urban scale</div>
+      <h1 class="city-name"><span class="word"><span>How big</span></span> <span class="word"><span>is a city,</span></span><br><span class="word"><span>really?</span></span></h1>
+      <p class="sub">Measured in acres — the unit of farms and football fields — the world's megacities become strangely comprehensible. Nine cities. Nine scales. NYC is our measuring stick.</p>
+      <div class="unit-demo"><div class="sq"></div> 1 ACRE ≈ 0.75 FOOTBALL FIELDS ≈ 4,047 m²</div>
+    </div>
+  </section>
+
+  <!-- NYC -->
+  <section class="slide" id="s-nyc" data-initial="NY" data-color="#ffd60a" data-cursor="cur-taxi" data-sound="rumble">
+    <div class="nycgrid" id="nycgrid"></div>
+    <div class="glow" id="nycglow"></div>
+    <div class="slide-inner">
+      <div class="eyebrow">the measuring stick · five boroughs</div>
+      <h1 class="city-name"><span class="word"><span>New York</span></span> <span class="word"><span>City</span></span></h1>
+      <div class="acres"><span class="count" data-target="192300">0</span><small>acres of land</small></div>
+      <div class="km-note">≈ 778 km² · 302.6 sq mi (land only — 469 sq mi with water)</div>
+      <div class="scalebar">
+        <div class="sb-label"><span>vs NYC</span><span>1.0×</span></div>
+        <div class="sb-track"><div class="sb-fill" style="right:0"></div></div>
+      </div>
+      <div class="chips">
+        <div class="chip"><div class="k">Population</div><div class="v">8.5M</div></div>
+        <div class="chip"><div class="k">Density</div><div class="v">~44 people / acre</div></div>
+        <div class="chip"><div class="k">Central Park</div><div class="v">843 acres (0.4%)</div></div>
+        <div class="chip"><div class="k">Restaurants</div><div class="v">~25,000</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TOKYO -->
+  <section class="slide" id="s-tokyo" data-initial="TK" data-color="#ff4fd8" data-cursor="cur-neon" data-sound="buzz">
+    <div class="neon-v neon-a">東京</div>
+    <div class="neon-v neon-b">新宿</div>
+    <div class="neon-v neon-c">渋谷</div>
+    <div class="slide-inner">
+      <div class="eyebrow" style="color:#39d5ff">tokyo metropolis · 23 wards + tama</div>
+      <h1 class="city-name"><span class="word"><span>Tokyo</span></span></h1>
+      <div class="acres" style="color:#c9f6ff"><span class="count" data-target="542200">0</span><small>acres</small></div>
+      <div class="km-note" style="color:#c9f6ff">≈ 2,194 km² · the metropolis proper</div>
+      <div class="scalebar" style="color:#c9f6ff">
+        <div class="sb-label"><span>vs NYC</span><span>2.8×</span></div>
+        <div class="sb-track"><div class="sb-fill" style="right:0"></div><div class="sb-nyc" style="left:35.5%"></div></div>
+      </div>
+      <div class="chips">
+        <div class="chip"><div class="k">Population</div><div class="v">14.2M</div></div>
+        <div class="chip"><div class="k">Greater Tokyo</div><div class="v">37M people</div></div>
+        <div class="chip"><div class="k">Shinjuku Station</div><div class="v">3.5M passengers/day</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LONDON -->
+  <section class="slide" id="s-london" data-initial="LN" data-color="#e0322c" data-cursor="cur-fog" data-sound="hush">
+    <div class="fog"></div><div class="fog f2"></div><div class="fog f3"></div>
+    <div class="roundel" title="Mind the gap"><div class="ring"></div><div class="bar"></div></div>
+    <div class="slide-inner">
+      <div class="eyebrow">greater london · 32 boroughs + the city</div>
+      <h1 class="city-name"><span class="word"><span>London</span></span></h1>
+      <div class="acres"><span class="count" data-target="388400">0</span><small>acres</small></div>
+      <div class="km-note">≈ 1,572 km² · 607 sq mi</div>
+      <div class="scalebar">
+        <div class="sb-label"><span>vs NYC</span><span>2.0×</span></div>
+        <div class="sb-track"><div class="sb-fill" style="right:0"></div><div class="sb-nyc" style="left:49.5%"></div></div>
+      </div>
+      <div class="chips">
+        <div class="chip"><div class="k">Population</div><div class="v">8.9M</div></div>
+        <div class="chip"><div class="k">Green space</div><div class="v">~47% of the city</div></div>
+        <div class="chip"><div class="k">Hyde Park</div><div class="v">350 acres</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DELHI -->
+  <section class="slide" id="s-delhi" data-initial="DL" data-color="#ffb703" data-cursor="cur-petal" data-sound="drone">
+    <div id="marigolds"></div>
+    <div class="slide-inner">
+      <div class="eyebrow">national capital territory</div>
+      <h1 class="city-name"><span class="word"><span>Delhi</span></span></h1>
+      <div class="acres"><span class="count" data-target="366700">0</span><small>acres</small></div>
+      <div class="km-note">≈ 1,484 km² · seven cities layered over a millennium</div>
+      <div class="scalebar">
+        <div class="sb-label"><span>vs NYC</span><span>1.9×</span></div>
+        <div class="sb-track"><div class="sb-fill" style="right:0"></div><div class="sb-nyc" style="left:52.4%"></div></div>
+      </div>
+      <div class="chips">
+        <div class="chip"><div class="k">Population</div><div class="v">33M+ (NCT urban)</div></div>
+        <div class="chip"><div class="k">Metro network</div><div class="v">393 km</div></div>
+        <div class="chip"><div class="k">The Ridge forest</div><div class="v">~19,000 acres</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MUMBAI -->
+  <section class="slide" id="s-mumbai" data-initial="MB" data-color="#8ecae6" data-cursor="cur-drop" data-sound="rain">
+    <div id="raindrops"></div>
+    <div class="sea"></div>
+    <div class="slide-inner">
+      <div class="eyebrow">greater mumbai · the island city</div>
+      <h1 class="city-name"><span class="word"><span>Mumbai</span></span></h1>
+      <div class="acres"><span class="count" data-target="149000">0</span><small>acres</small></div>
+      <div class="km-note">≈ 603 km² · smaller than NYC, denser than almost anywhere</div>
+      <div class="scalebar">
+        <div class="sb-label"><span>vs NYC</span><span>0.77×</span></div>
+        <div class="sb-track"><div class="sb-fill" style="right:23%"></div><div class="sb-nyc" style="right:0;left:auto"></div></div>
+      </div>
+      <div class="chips">
+        <div class="chip"><div class="k">Population</div><div class="v">~21M metro</div></div>
+        <div class="chip"><div class="k">Density</div><div class="v">~140 people / acre</div></div>
+        <div class="chip"><div class="k">Local trains</div><div class="v">7.5M riders/day</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ISTANBUL -->
+  <section class="slide" id="s-istanbul" data-initial="IS" data-color="#d94f30" data-cursor="cur-moon" data-sound="wind">
+    <div class="tiles"></div>
+    <div class="crescent"></div>
+    <div class="slide-inner">
+      <div class="eyebrow">two continents · one city</div>
+      <h1 class="city-name"><span class="word"><span>Istanbul</span></span></h1>
+      <div class="acres"><span class="count" data-target="1349500">0</span><small>acres</small></div>
+      <div class="km-note">≈ 5,461 km² · straddling Europe and Asia across the Bosphorus</div>
+      <div class="scalebar">
+        <div class="sb-label"><span>vs NYC</span><span>7.0×</span></div>
+        <div class="sb-track"><div class="sb-fill" style="right:0"></div><div class="sb-nyc" style="left:14.2%"></div></div>
+      </div>
+      <div class="chips">
+        <div class="chip"><div class="k">Population</div><div class="v">15.9M</div></div>
+        <div class="chip"><div class="k">Continents</div><div class="v">2</div></div>
+        <div class="chip"><div class="k">Grand Bazaar</div><div class="v">4,000 shops</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SÃO PAULO -->
+  <section class="slide" id="s-sp" data-initial="SP" data-color="#f2e94e" data-cursor="cur-concrete" data-sound="pulse">
+    <div class="skyline" id="skyline"></div>
+    <div class="slide-inner">
+      <div class="eyebrow">southern hemisphere's giant</div>
+      <h1 class="city-name"><span class="word"><span>São Paulo</span></span></h1>
+      <div class="acres"><span class="count" data-target="375900">0</span><small>acres</small></div>
+      <div class="km-note">≈ 1,521 km² · Latin America's largest economy in one municipality</div>
+      <div class="scalebar">
+        <div class="sb-label"><span>vs NYC</span><span>2.0×</span></div>
+        <div class="sb-track"><div class="sb-fill" style="right:0"></div><div class="sb-nyc" style="left:51.2%"></div></div>
+      </div>
+      <div class="chips">
+        <div class="chip"><div class="k">Population</div><div class="v">11.5M city</div></div>
+        <div class="chip"><div class="k">Helipads</div><div class="v">most of any city</div></div>
+        <div class="chip"><div class="k">Pizzerias</div><div class="v">~8,000 (sorry, NYC)</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BEIJING -->
+  <section class="slide" id="s-beijing" data-initial="BJ" data-color="#e07a1f" data-cursor="cur-lantern" data-sound="gong">
+    <div class="lattice"></div>
+    <div class="sun"></div>
+    <div class="slide-inner">
+      <div class="eyebrow">beijing municipality</div>
+      <h1 class="city-name"><span class="word"><span>Beijing</span></span></h1>
+      <div class="acres"><span class="count" data-target="4055000">0</span><small>acres</small></div>
+      <div class="km-note">≈ 16,411 km² · a municipality the size of a small country</div>
+      <div class="scalebar">
+        <div class="sb-label"><span>vs NYC</span><span>21×</span></div>
+        <div class="sb-track"><div class="sb-fill" style="right:0"></div><div class="sb-nyc" style="left:4.7%"></div></div>
+      </div>
+      <div class="mega">⚠ caveat: this is the full municipality — mountains, farms and all. The urban core is far smaller.</div>
+      <div class="chips" style="margin-top:1rem">
+        <div class="chip"><div class="k">Population</div><div class="v">21.9M</div></div>
+        <div class="chip"><div class="k">Forbidden City</div><div class="v">178 acres</div></div>
+        <div class="chip"><div class="k">Ring roads</div><div class="v">7 (and counting)</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINALE -->
+  <section class="slide" id="s-final" data-initial="Σ" data-color="#f5f2ec" data-cursor="cur-cross" data-sound="hiss">
+    <div class="slide-inner">
+      <div class="eyebrow">side by side · acres of land</div>
+      <h1 class="city-name"><span class="word"><span>The scale of it all</span></span></h1>
+      <div class="bars" id="bars"></div>
+      <p style="margin-top:1.6rem;font-family:'IBM Plex Mono',monospace;font-size:.68rem;opacity:.55;letter-spacing:.1em">
+        Areas are administrative land boundaries — cities draw their borders very differently, which is half the story.
+      </p>
+    </div>
+  </section>
+
+  <!-- PRINT EDITION -->
+  <section class="slide" id="s-print" data-initial="✳" data-color="#d94f30" data-cursor="cur-brush" data-sound="paper">
+    <div class="papergrain"></div>
+    <div class="misreg">
+      <div class="ghost" style="--gx:4%;--gy:6%;--gc:#d94f30">ATLAS</div>
+      <div class="ghost" style="--gx:calc(4% + 8px);--gy:calc(6% + 7px);--gc:#2a7f8f">ATLAS</div>
+    </div>
+    <div class="slide-inner">
+      <div class="eyebrow" style="color:#20313f">special edition · the riso print</div>
+      <h1 class="city-name"><span class="word"><span>The atlas,</span></span> <span class="word"><span>flattened</span></span></h1>
+      <p style="max-width:560px;font-weight:300;line-height:1.65;opacity:.85">Every slide in this deck was its own weather system. The print edition irons them flat — grain, misregistration, ink on paper. Pin it on the wall.</p>
+      <div class="riso-row" id="risorow"></div>
+      <div class="stamp">■ Acre Atlas · Edition of 1</div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+let cur=0,lock=false;
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* rail — theme-aware */
+const rail=document.getElementById('rail');
+slides.forEach((s,i)=>{
+  const d=document.createElement('button');
+  d.className='dot'+(i===0?' on':'');
+  d.textContent=s.dataset.initial;
+  d.style.setProperty('--c',s.dataset.color);
+  d.setAttribute('aria-label','Go to slide '+(i+1));
+  d.onclick=()=>go(i);
+  rail.appendChild(d);
+});
+const dots=[...rail.children];
+
+/* per-slide cursor */
+const cursorEl=document.getElementById('cursor');
+addEventListener('pointermove',e=>{
+  cursorEl.style.left=e.clientX+'px';
+  cursorEl.style.top=e.clientY+'px';
+},{passive:true});
+const cursorClasses=['cur-cross','cur-taxi','cur-neon','cur-fog','cur-petal','cur-drop','cur-moon','cur-concrete','cur-lantern','cur-brush'];
+
+/* ---------- sound engine (WebAudio, no files) ---------- */
+let AC=null,sndOn=false,sndNodes=[];
+function noiseBuffer(sec=2){
+  const b=AC.createBuffer(1,AC.sampleRate*sec,AC.sampleRate);
+  const d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  return b;
+}
+function stopSound(){sndNodes.forEach(n=>{try{n.stop?n.stop():n.disconnect()}catch(e){}});sndNodes=[]}
+function playSound(kind){
+  if(!sndOn||!AC)return;
+  stopSound();
+  const g=AC.createGain();g.gain.value=0;g.connect(AC.destination);
+  g.gain.linearRampToValueAtTime(0.05,AC.currentTime+1.4);
+  sndNodes.push(g);
+  const keep=(...ns)=>sndNodes.push(...ns);
+  const noise=(type,freq,q=1)=>{
+    const s=AC.createBufferSource();s.buffer=noiseBuffer();s.loop=true;
+    const f=AC.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;
+    s.connect(f);f.connect(g);s.start();keep(s);return f;
+  };
+  const osc=(type,freq,det=0)=>{
+    const o=AC.createOscillator();o.type=type;o.frequency.value=freq;o.detune.value=det;
+    o.connect(g);o.start();keep(o);return o;
+  };
+  if(kind==='rumble'){noise('lowpass',140);osc('sine',48);}
+  else if(kind==='buzz'){osc('sawtooth',60);osc('sawtooth',60,8);noise('highpass',6000);}
+  else if(kind==='hush'){noise('bandpass',700,.5);}
+  else if(kind==='drone'){osc('sine',98);osc('sine',147,5);osc('triangle',196,3);}
+  else if(kind==='rain'){noise('highpass',1400);noise('bandpass',3200,.4);}
+  else if(kind==='wind'){
+    const f=noise('bandpass',400,.8);
+    const lfo=AC.createOscillator(),lg=AC.createGain();
+    lfo.frequency.value=.18;lg.gain.value=260;lfo.connect(lg);lg.connect(f.frequency);lfo.start();keep(lfo);
+  }
+  else if(kind==='pulse'){
+    let n=0;
+    const iv=setInterval(()=>{
+      if(!sndOn){clearInterval(iv);return}
+      if(n++%2)return;
+      const o=AC.createOscillator(),og=AC.createGain();
+      o.frequency.setValueAtTime(75,AC.currentTime);
+      o.frequency.exponentialRampToValueAtTime(36,AC.currentTime+.2);
+      og.gain.setValueAtTime(.13,AC.currentTime);
+      og.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+.25);
+      o.connect(og);og.connect(AC.destination);o.start();o.stop(AC.currentTime+.28);
+    },900);
+    sndNodes.push({stop:()=>clearInterval(iv),disconnect:()=>clearInterval(iv)});
+  }
+  else if(kind==='gong'){
+    let n=0;
+    const iv=setInterval(()=>{
+      if(!sndOn){clearInterval(iv);return}
+      if(n++%3)return;
+      const t=AC.currentTime;
+      [196,294,392.5].forEach(fr=>{
+        const o=AC.createOscillator(),og=AC.createGain();
+        o.frequency.value=fr*(1+Math.random()*.004);
+        og.gain.setValueAtTime(.06,t);
+        og.gain.exponentialRampToValueAtTime(.0001,t+2.2);
+        o.connect(og);og.connect(AC.destination);o.start(t);o.stop(t+2.3);
+      });
+    },2600);
+    sndNodes.push({stop:()=>clearInterval(iv),disconnect:()=>clearInterval(iv)});
+  }
+  else if(kind==='hiss'){noise('bandpass',5000,.3);}
+  else if(kind==='paper'){noise('bandpass',3800,.4);}
+}
+const sndbtn=document.getElementById('sndbtn');
+sndbtn.onclick=()=>{
+  sndOn=!sndOn;
+  sndbtn.textContent='SOUND: '+(sndOn?'ON':'OFF');
+  sndbtn.classList.toggle('on',sndOn);
+  if(sndOn&&!AC)AC=new (window.AudioContext||window.webkitAudioContext)();
+  if(sndOn)playSound(slides[cur].dataset.sound);else stopSound();
+};
+
+/* ---------- navigation: signature exits + breach ---------- */
+function go(i){
+  if(i===cur||i<0||i>=slides.length)return;
+  const old=slides[cur],oldIdx=cur,dir=i>cur?1:-1;
+  old.classList.remove('active');
+  old.classList.add('leaving');
+  setTimeout(()=>old.classList.remove('leaving'),1000);
+  dots[oldIdx].classList.remove('on');
+  cur=i;
+  const nw=slides[cur];
+  /* BREACH: Mumbai's monsoon overflows onto the next slide */
+  if(old.id==='s-mumbai'&&dir>0&&!reduced){
+    nw.classList.add('flooded');
+    for(let k=0;k<26;k++){
+      const r=document.createElement('div');r.className='floodrain';
+      r.style.left=Math.random()*100+'%';
+      r.style.animationDuration=(0.7+Math.random()*0.9)+'s';
+      r.style.animationDelay=(-Math.random()*2)+'s';
+      nw.appendChild(r);
+      setTimeout(()=>r.remove(),1500);
+    }
+    setTimeout(()=>nw.classList.remove('flooded'),1500);
+  }
+  nw.classList.add('active');
+  dots.forEach((d,k)=>{
+    d.classList.toggle('on',k===cur);
+    d.classList.toggle('passed',k<cur);
+  });
+  document.body.classList.remove(...cursorClasses);
+  document.body.classList.add(nw.dataset.cursor);
+  playSound(nw.dataset.sound);
+  runCounters(nw);
+}
+function step(dir){
+  if(lock)return;
+  lock=true;
+  go(cur+dir);
+  setTimeout(()=>lock=false,1000);
+}
+
+/* input: wheel, keys, touch */
+addEventListener('wheel',e=>{ if(Math.abs(e.deltaY)>28) step(e.deltaY>0?1:-1)},{passive:true});
+addEventListener('keydown',e=>{
+  if(['ArrowDown','ArrowRight','PageDown',' '].includes(e.key)) step(1);
+  if(['ArrowUp','ArrowLeft','PageUp'].includes(e.key)) step(-1);
+  if(e.key==='Home') go(0);
+  if(e.key==='End') go(slides.length-1);
+});
+let ty=null;
+addEventListener('touchstart',e=>ty=e.touches[0].clientY,{passive:true});
+addEventListener('touchend',e=>{
+  if(ty===null)return;
+  const dy=ty-e.changedTouches[0].clientY;
+  if(Math.abs(dy)>50) step(dy>0?1:-1);
+  ty=null;
+},{passive:true});
+
+/* animated counters */
+function runCounters(slide){
+  slide.querySelectorAll('.count').forEach(el=>{
+    const target=+el.dataset.target;
+    if(reduced){el.textContent=target.toLocaleString();return}
+    const t0=performance.now(),dur=1600;
+    function tick(t){
+      const p=Math.min((t-t0)/dur,1);
+      const e=1-Math.pow(1-p,4);
+      el.textContent=Math.round(target*e).toLocaleString();
+      if(p<1)requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+}
+runCounters(slides[0]);
+
+/* intro stars */
+const stars=document.getElementById('stars');
+for(let i=0;i<60;i++){
+  const s=document.createElement('div');s.className='star';
+  s.style.left=Math.random()*100+'%';s.style.top=Math.random()*100+'%';
+  s.style.animationDelay=(Math.random()*3)+'s';
+  stars.appendChild(s);
+}
+
+/* NYC grid + cursor glow */
+const grid=document.getElementById('nycgrid');
+for(let i=0;i<180;i++){const b=document.createElement('div');b.className='blk';b.style.transitionDelay=(Math.random()*1.4)+'s';grid.appendChild(b)}
+const glow=document.getElementById('nycglow');
+document.getElementById('s-nyc').addEventListener('pointermove',e=>{
+  glow.style.left=e.clientX+'px';glow.style.top=e.clientY+'px';
+});
+
+/* Delhi marigolds */
+const mg=document.getElementById('marigolds');
+for(let i=0;i<26;i++){
+  const m=document.createElement('div');m.className='marigold';
+  const sz=6+Math.random()*16;
+  m.style.width=m.style.height=sz+'px';
+  m.style.left=Math.random()*100+'%';
+  m.style.animationDuration=(9+Math.random()*14)+'s';
+  m.style.animationDelay=(-Math.random()*20)+'s';
+  mg.appendChild(m);
+}
+
+/* Mumbai rain */
+const rn=document.getElementById('raindrops');
+for(let i=0;i<70;i++){
+  const r=document.createElement('div');r.className='rain';
+  r.style.left=Math.random()*100+'%';
+  r.style.animationDuration=(0.7+Math.random()*0.9)+'s';
+  r.style.animationDelay=(-Math.random()*2)+'s';
+  r.style.opacity=0.25+Math.random()*0.5;
+  rn.appendChild(r);
+}
+
+/* São Paulo skyline */
+const sk=document.getElementById('skyline');
+for(let i=0;i<34;i++){
+  const b=document.createElement('div');b.className='bld';
+  b.style.height=(18+Math.random()*82)+'%';
+  b.style.transitionDelay=(i*0.035)+'s';
+  sk.appendChild(b);
+}
+
+/* finale bars */
+const data=[
+  ['Beijing',4055000,'#e07a1f'],
+  ['Istanbul',1349500,'#d94f30'],
+  ['Tokyo',542200,'#39d5ff'],
+  ['London',388400,'#e0322c'],
+  ['São Paulo',375900,'#f2e94e'],
+  ['Delhi',366700,'#ffb703'],
+  ['NYC',192300,'#ffd60a'],
+  ['Mumbai',149000,'#8ecae6'],
+];
+const max=data[0][1];
+const bars=document.getElementById('bars');
+data.forEach(([nm,v,c],i)=>{
+  const row=document.createElement('div');row.className='brow';
+  row.innerHTML=`<div class="nm">${nm}</div>
+    <div class="btrack"><div class="bfill" style="background:${c};right:${100-(v/max*100)}%;transition-delay:${i*0.12}s"></div></div>
+    <div class="num">${v.toLocaleString()} ac</div>`;
+  bars.appendChild(row);
+});
+
+/* print edition cards */
+const risoRow=document.getElementById('risorow');
+data.forEach(([nm,v,c])=>{
+  const card=document.createElement('div');card.className='riso';card.style.setProperty('--c',c);
+  card.innerHTML=`<div class="sw"></div><div class="k">${nm}</div><div class="v">${(v/max).toFixed(2)} × Beijing</div><div class="a">${v.toLocaleString()} ac</div>`;
+  risoRow.appendChild(card);
+});
+</script>
+</body>
+</html>
